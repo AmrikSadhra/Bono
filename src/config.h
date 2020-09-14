@@ -15,11 +15,14 @@ public:
         static Config instance;
         return instance;
     }
+
+    // Explicitly disable copy constructor and assignment operator
+    Config(const Config&) = delete;
+    Config& operator=(const Config&) = delete;
+
     uint32_t windowWidth = DEFAULT_X_RESOLUTION;
     uint32_t windowHeight = DEFAULT_Y_RESOLUTION;
 
 private:
     Config() = default;
-    Config(const Config&);
-    Config& operator=(const Config&);
 };

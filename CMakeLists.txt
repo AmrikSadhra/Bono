@@ -20,9 +20,17 @@ set(SOURCE_FILES
         lib/imgui/examples/imgui_impl_opengl3.h
         lib/glew-cmake/src/glew.c
         src/main.cpp
-        src/Renderer.cpp src/Renderer.h src/Config.h)
+        src/renderer.cpp
+        src/renderer.h
+        src/config.h
+        src/packets.h
+        src/udp_client.cpp
+        src/udp_client.h)
 
 add_executable(Bono  ${SOURCE_FILES})
+
+#[[Shitty Windows only WinSock]]
+target_link_libraries(Bono wsock32 ws2_32)
 
 #[[IMGUI]]
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui")
