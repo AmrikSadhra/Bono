@@ -11,6 +11,7 @@
 #include <memory>
 #include <iostream>
 #include "config.h"
+#include "udp_client.h"
 
 enum WindowStatus : uint8_t
 {
@@ -25,13 +26,13 @@ namespace Bono
     public:
         explicit Renderer();
         ~Renderer();
-        void Render();
+        void Render(UdpClient *udpClient);
 
     private:
         void _InitOpenGL(uint32_t resolutionX, uint32_t resolutionY, const std::string &windowName);
         void _InitIMGUI();
         void _BeginFrame();
-        static void _DrawUI();
+        static void _DrawUI(UdpClient *udpClient);
         void _EndFrame();
 
         static inline void GlfwError(int id, const char *description) { std::cerr << description; }

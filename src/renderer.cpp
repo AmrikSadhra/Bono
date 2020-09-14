@@ -15,7 +15,8 @@ namespace Bono
         ImGui::DestroyContext();
     }
 
-    void Renderer::Render()
+    // TODO: I shouldn't be passing the entire UDP client in..
+    void Renderer::Render(UdpClient *udpClient)
     {
         while (!glfwWindowShouldClose(m_window.get()))
         {
@@ -30,7 +31,7 @@ namespace Bono
             this->_BeginFrame();
 
             // Actual Render here
-            this->_DrawUI();
+            this->_DrawUI(udpClient);
 
             // Draw the UI VAOs and swap buffers
             this->_EndFrame();
@@ -122,10 +123,35 @@ namespace Bono
         }
     }
 
-    void Renderer::_DrawUI()
+    void Renderer::_DrawUI(UdpClient *udpClient)
     {
         // TODO: Add UI code here, and feed a struct of Packets
-        ImGui::ShowDemoWindow();
+        ImGui::Begin("Bono");
+
+        // Take the lock from UDP client whilst the data is parsed into a renderable format
+        udpClient->mtxData.lock();
+        std::vector<PacketCarTelemetryData> carTelemetryDataPkts(udpClient->carTelemetryData.begin(), udpClient->carTelemetryData.end());
+        udpClient->mtxData.unlock();
+
+        // No point plotting if no data...
+        if(!carTelemetryDataPkts.empty())
+        {
+            // TODO: Revisit fast path...
+            //// Calculate the players throttle offset in the packet
+            //size_t firstDriverThrottleOffset = offsetof(PacketCarTelemetryData, carTelemetryData[0].throttle);
+            //firstDriverThrottleOffset += carTelemetryDataPkts[0].header.playerCarIndex * sizeof(CarTelemetryData);
+            //// Floats aren't contiguous but part of a structure,pass a pointer to driver float and the sizeof() of Packet in the Stride parameter.
+            //ImGui::PlotLines("Lines", (float*)(carTelemetryDataPkts.data() + firstDriverThrottleOffset) , carTelemetryDataPkts.size(), 0, "", 0.f, 1.0f, ImVec2(0,80), sizeof(PacketCarTelemetryData));
+            std::vector<float> playerCarThrottleTrace;
+            for(auto &carTelemetryDataPkt : carTelemetryDataPkts)
+            {
+                playerCarThrottleTrace.push_back(carTelemetryDataPkt.carTelemetryData[10].speed);
+            }
+            ImGui::PlotLines("Lines", playerCarThrottleTrace.data() , playerCarThrottleTrace.size(), 0, "", 0.f, 350.0f, ImVec2(0,80));
+        }
+
+
+        ImGui::End();
     }
 
     void Renderer::_EndFrame()

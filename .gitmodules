@@ -10,3 +10,6 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "lib/boost-cmake"]
+	path = lib/boost-cmake
+	url = https://github.com/Orphis/boost-cmake.git

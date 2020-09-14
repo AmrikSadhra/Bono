@@ -27,20 +27,17 @@ set(SOURCE_FILES
         src/udp_client.cpp
         src/udp_client.h)
 
-add_executable(Bono  ${SOURCE_FILES})
-
-#[[Shitty Windows only WinSock]]
-target_link_libraries(Bono wsock32 ws2_32)
+add_executable(Bono ${SOURCE_FILES})
 
 #[[IMGUI]]
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/imgui")
+include_directories(lib/imgui)
 
 #[[GLEW Configuration]]
-add_definitions(-DGLEW_STATIC -D__NO_INLINE__)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-cmake/include")
+add_subdirectory(lib/glew-cmake)
+target_link_libraries(Bono libglew_static)
 
 #[[GLM Configuration]]
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glm")
+include_directories(lib/glm)
 
 #[[OpenGL Configuration]]
 find_package(OpenGL REQUIRED)
@@ -51,5 +48,9 @@ target_link_libraries(Bono ${OPENGL_LIBRARIES})
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(lib/glfw/ "${CMAKE_CURRENT_BINARY_DIR}/glfw")
+add_subdirectory(lib/glfw)
 target_link_libraries(Bono glfw)
+
+#[[Boost and winsock for ASIO - You knew it was coming, didn't ya]]
+add_subdirectory(lib/boost-cmake)
+target_link_libraries(Bono Boost::boost ws2_32)

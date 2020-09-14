@@ -5,10 +5,16 @@ using namespace Bono;
 
 int main()
 {
-    //UdpClient udpClient("127.0.0.1", 20777);
-    Renderer renderer;
+    // Fire up the Async UDP Client on it's own thread
+    UdpClient client("127.0.0.1", 20777);
+    std::thread udpReceiveThread([&] { client.Receive(); });
 
-    renderer.Render();
+    // And start the renderer on Main
+    Renderer renderer;
+    renderer.Render(&client);
+
+    // When the renderer closes, so too should the UDP client
+    udpReceiveThread.join();
 
     return 0;
 }

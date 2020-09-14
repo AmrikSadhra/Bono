@@ -1,54 +1,79 @@
 #include "udp_client.h"
 
-#define BUFLEN 512 // Max length of buffer
+using boost::asio::ip::udp;
+using boost::asio::ip::address;
 
 namespace Bono
 {
-    UdpClient::UdpClient(const std::string &ipAddress, uint32_t port)
+    UdpClient::UdpClient(const std::string &ipAddress, uint32_t port) :
+        motionData(MAX_NUM_PACKETS), sessionData(MAX_NUM_PACKETS), lapData(MAX_NUM_PACKETS),
+        eventData(MAX_NUM_PACKETS), participantsData(MAX_NUM_PACKETS), carSetupData(MAX_NUM_PACKETS),
+        carTelemetryData(MAX_NUM_PACKETS), carStatusData(MAX_NUM_PACKETS)
     {
-        WSADATA wsa;
-
-        // Initialise winsock
-        printf("Initialising Winsock...");
-        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-        {
-            printf("Failed. Error Code : %d", WSAGetLastError());
-            exit(EXIT_FAILURE);
-        }
-        if ((m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == SOCKET_ERROR)
-        {
-            printf("socket() failed with error code : %d", WSAGetLastError());
-            exit(EXIT_FAILURE);
-        }
-
-        // Setup socket descriptor
-        sockaddr_in socketInfo = {};
-        socketInfo.sin_family           = AF_INET;
-        socketInfo.sin_port             = htons(port);
-        socketInfo.sin_addr.S_un.S_addr = inet_addr(ipAddress.c_str());
-
-        ::bind(m_socket, (SOCKADDR*) &socketInfo, sizeof(socketInfo));
-
-        char buf[BUFLEN];
-        int slen = 0;
-
-        // start communication
-        while (1)
-        {
-            // Clear the buffer and block to receive data from the socket
-            memset(buf, '\0', BUFLEN);
-            if (recvfrom(m_socket, buf, BUFLEN, 0, (struct sockaddr *) &socketInfo, &slen) == SOCKET_ERROR)
-            {
-                printf("recvfrom() failed with error code : %d", WSAGetLastError());
-                exit(EXIT_FAILURE);
-            }
-            puts(buf);
-        }
+        m_socket.open(udp::v4());
+        m_socket.bind(udp::endpoint(address::from_string("127.0.0.1"), port));
     }
 
-    UdpClient::~UdpClient()
+    void UdpClient::Receive()
     {
-        closesocket(m_socket);
-        WSACleanup();
+        // Queue initial async callback
+        this->_Wait();
+
+        // Start to service the queue
+        std::cout << "Receiving\n";
+        m_ioService.run();
+        std::cout << "Receiver exit\n";
+    }
+
+    void UdpClient::_HandleReceive(const boost::system::error_code& error, size_t bytes_transferred)
+    {
+        if (error)
+        {
+            std::cout << "Receive failed: " << error.message() << "\n";
+            return;
+        }
+
+        // Take the lock until end of scope
+        const std::lock_guard<std::mutex> lock(mtxData);
+
+        // Check the packet type
+        auto *packetHeader = reinterpret_cast<PacketHeader*>(m_receiveBuffer.data());
+        switch(packetHeader->packetId)
+        {
+        case PacketType::Motion:
+            motionData.push_back(*reinterpret_cast<PacketMotionData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::Session:
+            sessionData.push_back(*reinterpret_cast<PacketSessionData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::LapData:
+            lapData.push_back(*reinterpret_cast<PacketLapData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::Event:
+            eventData.push_back(*reinterpret_cast<PacketEventData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::Participants:
+            participantsData.push_back(*reinterpret_cast<PacketParticipantsData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::CarSetups:
+            carSetupData.push_back(*reinterpret_cast<PacketCarSetupData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::CarTelemetry:
+            carTelemetryData.push_back(*reinterpret_cast<PacketCarTelemetryData*>(m_receiveBuffer.data()));
+            break;
+        case PacketType::CarStatus:
+            carStatusData.push_back(*reinterpret_cast<PacketCarStatusData*>(m_receiveBuffer.data()));
+            break;
+        }
+
+        // Requeue the callback
+        this->_Wait();
+    }
+
+    void UdpClient::_Wait()
+    {
+        m_socket.async_receive_from(boost::asio::buffer(m_receiveBuffer),m_remoteEndpoint,
+                                  boost::bind(&UdpClient::_HandleReceive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+
     }
 } // namespace Bono
