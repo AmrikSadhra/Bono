@@ -25,7 +25,8 @@ set(SOURCE_FILES
         src/config.h
         src/packets.h
         src/udp_client.cpp
-        src/udp_client.h)
+        src/udp_client.h
+        src/gamedata.h)
 
 add_executable(Bono ${SOURCE_FILES})
 

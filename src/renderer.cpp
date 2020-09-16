@@ -2,7 +2,7 @@
 
 namespace Bono
 {
-    Renderer::Renderer()
+    Renderer::Renderer(const std::shared_ptr<GameData> gameData) : m_gameData(gameData)
     {
         this->_InitOpenGL(Config::get().windowWidth, Config::get().windowWidth, "Bono!");
         this->_InitIMGUI();
@@ -15,8 +15,7 @@ namespace Bono
         ImGui::DestroyContext();
     }
 
-    // TODO: I shouldn't be passing the entire UDP client in..
-    void Renderer::Render(UdpClient *udpClient)
+    void Renderer::Render()
     {
         while (!glfwWindowShouldClose(m_window.get()))
         {
@@ -31,7 +30,7 @@ namespace Bono
             this->_BeginFrame();
 
             // Actual Render here
-            this->_DrawUI(udpClient);
+            this->_DrawUI();
 
             // Draw the UI VAOs and swap buffers
             this->_EndFrame();
@@ -123,33 +122,20 @@ namespace Bono
         }
     }
 
-    void Renderer::_DrawUI(UdpClient *udpClient)
+    void Renderer::_DrawUI()
     {
-        // TODO: Add UI code here, and feed a struct of Packets
+        std::vector<PacketCarTelemetryData> carTelemetryDataPkts = m_gameData->GetCarTelemetryData();
+
         ImGui::Begin("Bono");
 
-        // Take the lock from UDP client whilst the data is parsed into a renderable format
-        udpClient->mtxData.lock();
-        std::vector<PacketCarTelemetryData> carTelemetryDataPkts(udpClient->carTelemetryData.begin(), udpClient->carTelemetryData.end());
-        udpClient->mtxData.unlock();
+        uint8_t uTargetCarIdx = 0; //carTelemetryDataPkts[0].header.playerCarIndex;
 
-        // No point plotting if no data...
         if(!carTelemetryDataPkts.empty())
         {
-            // TODO: Revisit fast path...
-            //// Calculate the players throttle offset in the packet
-            //size_t firstDriverThrottleOffset = offsetof(PacketCarTelemetryData, carTelemetryData[0].throttle);
-            //firstDriverThrottleOffset += carTelemetryDataPkts[0].header.playerCarIndex * sizeof(CarTelemetryData);
-            //// Floats aren't contiguous but part of a structure,pass a pointer to driver float and the sizeof() of Packet in the Stride parameter.
-            //ImGui::PlotLines("Lines", (float*)(carTelemetryDataPkts.data() + firstDriverThrottleOffset) , carTelemetryDataPkts.size(), 0, "", 0.f, 1.0f, ImVec2(0,80), sizeof(PacketCarTelemetryData));
-            std::vector<float> playerCarThrottleTrace;
-            for(auto &carTelemetryDataPkt : carTelemetryDataPkts)
-            {
-                playerCarThrottleTrace.push_back(carTelemetryDataPkt.carTelemetryData[10].speed);
-            }
-            ImGui::PlotLines("Lines", playerCarThrottleTrace.data() , playerCarThrottleTrace.size(), 0, "", 0.f, 350.0f, ImVec2(0,80));
+            // Floats aren't contiguous but part of a structure,pass a pointer to driver float and the sizeof() of Packet in the Stride parameter.
+            float* playerThrottlePtr = &carTelemetryDataPkts[0].carTelemetryData[uTargetCarIdx].throttle;
+            ImGui::PlotLines("Lines", playerThrottlePtr, carTelemetryDataPkts.size(), 0, "", 0.f, 1.0f, ImVec2(0,80), sizeof(PacketCarTelemetryData));
         }
-
 
         ImGui::End();
     }
