@@ -45,4 +45,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: Bono Executable
-        path: ${{runner.workspace}}/build/${{BUILD_TYPE}}/Bono.exe
+        path: ${{runner.workspace}}/build/${{env.BUILD_TYPE}}/Bono.exe
