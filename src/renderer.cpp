@@ -1,17 +1,25 @@
 #include "renderer.h"
 
+#include <implot.h>
+#include <examples/imgui_impl_glfw.h>
+#include <examples/imgui_impl_opengl3.h>
+
 namespace Bono
 {
-    Renderer::Renderer(const std::shared_ptr<GameData> gameData) : m_gameData(gameData)
+    Renderer::Renderer(const std::shared_ptr<RaceDataBuffer> gameData) : m_raceDataBuffer(gameData)
     {
         this->_InitOpenGL(Config::get().windowWidth, Config::get().windowWidth, "Bono!");
         this->_InitIMGUI();
+
+        for (int i = 0; i < CHANNEL_COUNT; ++i)
+            dataChannels[i].name = analogueChannelNames[i];
     }
 
     Renderer::~Renderer()
     {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
+        ImPlot::DestroyContext();
         ImGui::DestroyContext();
     }
 
@@ -28,6 +36,10 @@ namespace Bono
 
             // Clear the screen for next input and grab focus
             this->_BeginFrame();
+
+            // Retrieve data from UDP buffers
+            // TODO: Move this elsewhere
+            this->_GetData();
 
             // Actual Render here
             this->_DrawUI();
@@ -90,9 +102,12 @@ namespace Bono
     void Renderer::_InitIMGUI()
     {
         ImGui::CreateContext();
+        ImPlot::CreateContext();
         ImGui_ImplGlfw_InitForOpenGL(m_window.get(), true);
         ImGui_ImplOpenGL3_Init("#version 330");
         ImGui::StyleColorsDark();
+        // Enable VTX offset support to handle large indices
+        ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
     }
 
     void Renderer::_BeginFrame()
@@ -122,22 +137,129 @@ namespace Bono
         }
     }
 
+    void Renderer::_GetData()
+    {
+        bool isDataAvailable       = false;
+        PacketMotionData motionPkt = m_raceDataBuffer->GetMotionData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_motionData.push_back(motionPkt);
+        }
+        PacketSessionData sessionPkt = m_raceDataBuffer->GetSessionData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_sessionData.push_back(sessionPkt);
+        }
+        PacketLapData lapPkt = m_raceDataBuffer->GetLapData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_lapData.push_back(lapPkt);
+        }
+        PacketEventData eventPkt = m_raceDataBuffer->GetEventData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_eventData.push_back(eventPkt);
+        }
+        PacketParticipantsData participantsPkt = m_raceDataBuffer->GetParticipantsData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_participantsData.push_back(participantsPkt);
+        }
+        PacketCarSetupData carSetupPkt = m_raceDataBuffer->GetCarSetupData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_carSetupData.push_back(carSetupPkt);
+        }
+        PacketCarTelemetryData carTelemetryPkt = m_raceDataBuffer->GetCarTelemetryData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_carTelemetryData.push_back(carTelemetryPkt);
+        }
+        PacketCarStatusData carStatusPkt = m_raceDataBuffer->GetCarStatusData(isDataAvailable);
+        if (isDataAvailable)
+        {
+            m_carStatusData.push_back(carStatusPkt);
+        }
+    }
+
     void Renderer::_DrawUI()
     {
-        std::vector<PacketCarTelemetryData> carTelemetryDataPkts = m_gameData->GetCarTelemetryData();
-
-        ImGui::Begin("Bono");
-
-        uint8_t uTargetCarIdx = 0; //carTelemetryDataPkts[0].header.playerCarIndex;
-
-        if(!carTelemetryDataPkts.empty())
+        if (ImGui::CollapsingHeader("Telemetry Trace"))
         {
-            // Floats aren't contiguous but part of a structure,pass a pointer to driver float and the sizeof() of Packet in the Stride parameter.
-            float* playerThrottlePtr = &carTelemetryDataPkts[0].carTelemetryData[uTargetCarIdx].throttle;
-            ImGui::PlotLines("Lines", playerThrottlePtr, carTelemetryDataPkts.size(), 0, "", 0.f, 1.0f, ImVec2(0,80), sizeof(PacketCarTelemetryData));
-        }
+            ImGui::BeginGroup();
 
-        ImGui::End();
+            // Buttons
+            if (ImGui::Button("Clear", ImVec2(100, 0)))
+            {
+                for (auto& dataChannel : dataChannels)
+                {
+                    dataChannel.show = false;
+                }
+            }
+            if (ImGui::Button(paused ? "Resume" : "Pause", ImVec2(100, 0)))
+            {
+                paused = !paused;
+            }
+            for (uint8_t uDataSrcIdx = 0; uDataSrcIdx < CHANNEL_COUNT; ++uDataSrcIdx)
+            {
+                ImGui::Checkbox(dataChannels[uDataSrcIdx].name.c_str(), &dataChannels[uDataSrcIdx].show);
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+                {
+                    ImGui::SetDragDropPayload("DND_ANALOG_PLOT", &uDataSrcIdx, sizeof(int));
+                    ImGui::TextUnformatted(dataChannels[uDataSrcIdx].name.c_str());
+                    ImGui::EndDragDropSource();
+                }
+            }
+            ImGui::EndGroup();
+            ImGui::SameLine();
+
+            // Data
+            static float sessionTime = 0.f;
+            if (!paused)
+            {
+                // Analog signal values
+                for (uint8_t uDataSrcIdx = 0; uDataSrcIdx < CHANNEL_COUNT; ++uDataSrcIdx)
+                {
+                    if (dataChannels[uDataSrcIdx].show && !m_carTelemetryData.empty())
+                    {
+                        const PacketCarTelemetryData& carTelemetryPacket = m_carTelemetryData.back();
+                        sessionTime = carTelemetryPacket.header.sessionTime;
+                        switch (uDataSrcIdx)
+                        {
+                        case 0:
+                            dataChannels[uDataSrcIdx].AddPoint(sessionTime, carTelemetryPacket.carTelemetryData[0].throttle);
+                            break;
+                        case 1:
+                            dataChannels[uDataSrcIdx].AddPoint(sessionTime, carTelemetryPacket.carTelemetryData[0].brake);
+                            break;
+                        case 2:
+                            dataChannels[uDataSrcIdx].AddPoint(sessionTime, carTelemetryPacket.carTelemetryData[0].steer);
+                            break;
+                        case 3:
+                            dataChannels[uDataSrcIdx].AddPoint(sessionTime, (float)carTelemetryPacket.carTelemetryData[0].speed);
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                }
+            }
+            ImPlot::SetNextPlotLimitsY(0, 1);
+            ImPlot::SetNextPlotLimitsX(sessionTime - 10.0, sessionTime, paused ? ImGuiCond_Once : ImGuiCond_Always);
+            if (ImPlot::BeginPlot("##Digital"))
+            {
+                for (auto& dataChannel : dataChannels)
+                {
+                    if (dataChannel.show)
+                    {
+                        if (!dataChannel.Data.empty())
+                            ImPlot::PlotLine(dataChannel.name.c_str(), &dataChannel.Data[0].x, &dataChannel.Data[0].y, dataChannel.Data.size(), dataChannel.Offset,
+                                             2 * sizeof(float));
+                    }
+                }
+                ImPlot::EndPlot();
+            }
+        }
     }
 
     void Renderer::_EndFrame()

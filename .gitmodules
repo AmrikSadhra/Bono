@@ -13,3 +13,6 @@
 [submodule "lib/boost-cmake"]
 	path = lib/boost-cmake
 	url = https://github.com/Orphis/boost-cmake.git
+[submodule "lib/implot"]
+	path = lib/implot
+	url = https://github.com/epezent/implot.git

@@ -5,8 +5,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <imgui.h>
-#include <examples/imgui_impl_glfw.h>
-#include <examples/imgui_impl_opengl3.h>
 
 #include <memory>
 #include <iostream>
@@ -20,12 +18,52 @@ enum WindowStatus : uint8_t
     GAME
 };
 
+#define CHANNEL_COUNT 4
+
 namespace Bono
 {
+    // Utility structure for realtime plot
+    struct ScrollingBuffer
+    {
+        std::string name;
+        bool show;
+        int MaxSize;
+        int Offset;
+        ImVector<ImVec2> Data;
+        ScrollingBuffer()
+        {
+            MaxSize = 2000;
+            Offset  = 0;
+            Data.reserve(MaxSize);
+            show = false;
+            name = "Undefined";
+        }
+        void AddPoint(float x, float y)
+        {
+            if (Data.size() < MaxSize)
+                Data.push_back(ImVec2(x, y));
+            else
+            {
+                Data[Offset] = ImVec2(x, y);
+                Offset       = (Offset + 1) % MaxSize;
+            }
+        }
+        void Erase()
+        {
+            if (!Data.empty())
+            {
+                Data.shrink(0);
+                Offset = 0;
+            }
+        }
+    };
+
+    const std::string analogueChannelNames[] = {"Throttle", "Brake", "Steering", "Speed"};
+
     class Renderer
     {
     public:
-        explicit Renderer(std::shared_ptr<GameData> gameData);
+        explicit Renderer(std::shared_ptr<RaceDataBuffer> gameData);
         ~Renderer();
         void Render();
 
@@ -35,6 +73,8 @@ namespace Bono
         void _BeginFrame();
         void _DrawUI();
         void _EndFrame();
+        // TODO: Move somewhere else
+        void _GetData();
 
         static inline void GlfwError(int id, const char *description) { std::cerr << description; }
         static inline void _WindowSizeCallback(GLFWwindow *window, int width, int height)
@@ -47,7 +87,21 @@ namespace Bono
         std::shared_ptr<GLFWwindow> m_window;
         WindowStatus m_windowStatus = WindowStatus::UI;
 
-        // Gamedata
-        std::shared_ptr<GameData> m_gameData;
+        // UDP buffered data from F1 2019
+        std::shared_ptr<RaceDataBuffer> m_raceDataBuffer;
+
+        // TODO: Migrate these elsewhere
+        // Long term analysis and render buffers
+        std::vector<PacketMotionData> m_motionData;
+        std::vector<PacketSessionData> m_sessionData;
+        std::vector<PacketLapData> m_lapData;
+        std::vector<PacketEventData> m_eventData;
+        std::vector<PacketParticipantsData> m_participantsData;
+        std::vector<PacketCarSetupData> m_carSetupData;
+        std::vector<PacketCarTelemetryData> m_carTelemetryData;
+        std::vector<PacketCarStatusData> m_carStatusData;
+
+        bool paused = false;
+        ScrollingBuffer dataChannels[CHANNEL_COUNT];
     };
 } // namespace Bono

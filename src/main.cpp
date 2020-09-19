@@ -7,7 +7,7 @@ using namespace Bono;
 int main()
 {
     // Shared inter-thread data container
-    std::shared_ptr<GameData> gameData = std::make_shared<GameData>(MAX_NUM_PACKETS);
+    std::shared_ptr<RaceDataBuffer> gameData = std::make_shared<RaceDataBuffer>(MAX_NUM_PACKETS);
 
     // Fire up the Async UDP Client on it's own thread
     UdpClient client("127.0.0.1", 20777, gameData);
@@ -18,6 +18,7 @@ int main()
     renderer.Render();
 
     // When the renderer closes, so too should the UDP client
+    client.Shutdown();
     udpReceiveThread.join();
 
     return 0;

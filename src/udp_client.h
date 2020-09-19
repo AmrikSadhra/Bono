@@ -15,8 +15,9 @@ namespace Bono
     class UdpClient
     {
     public:
-        UdpClient(const std::string& ipAddress, uint32_t port, const std::shared_ptr<GameData>& gameData);
+        UdpClient(const std::string& ipAddress, uint32_t port, const std::shared_ptr<RaceDataBuffer>& gameData);
         void Receive();
+        void Shutdown();
 
     private:
         void _HandleReceive(const boost::system::error_code& error, size_t bytes_transferred);
@@ -29,6 +30,6 @@ namespace Bono
         boost::asio::ip::udp::endpoint m_remoteEndpoint;
 
         // Gamedata
-        std::shared_ptr<GameData> m_gameData;
+        std::shared_ptr<RaceDataBuffer> m_gameData;
     };
 } // namespace Bono

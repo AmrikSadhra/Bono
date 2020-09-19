@@ -3,7 +3,7 @@ project(Bono)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES
+set(IMGUI_SOURCE_FILES
         lib/imgui/imgui.cpp
         lib/imgui/imgui.h
         lib/imgui/imgui_demo.cpp
@@ -18,6 +18,13 @@ set(SOURCE_FILES
         lib/imgui/examples/imgui_impl_glfw.h
         lib/imgui/examples/imgui_impl_opengl3.cpp
         lib/imgui/examples/imgui_impl_opengl3.h
+        lib/implot/implot.cpp
+        lib/implot/implot.h
+        lib/implot/implot_items.cpp
+        lib/implot/implot_demo.cpp
+        )
+
+set(SOURCE_FILES
         lib/glew-cmake/src/glew.c
         src/main.cpp
         src/renderer.cpp
@@ -28,10 +35,11 @@ set(SOURCE_FILES
         src/udp_client.h
         src/gamedata.h)
 
-add_executable(Bono ${SOURCE_FILES})
+add_executable(Bono ${SOURCE_FILES} ${IMGUI_SOURCE_FILES})
 
 #[[IMGUI]]
 include_directories(lib/imgui)
+include_directories(lib/implot)
 
 #[[GLEW Configuration]]
 add_subdirectory(lib/glew-cmake)
