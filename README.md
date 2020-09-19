@@ -1,8 +1,12 @@
-</table><img src="res/logo.png" align="right" height="300" width="300"/>
+</table><img src="res/logo.png" align="right" height="200" width="200"/>
 
 # 🅱️ono 
   
-An F1 2019 UDP Connector, providing visualisation with ImPlot.  View and analyse your race session data in real time to eek out those last few tenths of lap time.
+An F1 2019 UDP Connector, providing visualisation with ImPlot.  
+
+* View and analyse your race session data in real time to eek out those last few tenths of lap time.
+* Export race data to CSV for later analysis in a tool of your choice.
+* Optimise your race strategy by seeing the condition of other drivers in real time.
 
 ![Screenshot](res/build_progress.png)  
 
