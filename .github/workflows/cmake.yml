@@ -40,3 +40,9 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build . --config $BUILD_TYPE
+      
+    - name: Artifact Bono
+      uses: actions/upload-artifact@v2
+      with:
+        name: Bono Executable
+        path: ${{runner.workspace}}/build/Bono.exe
