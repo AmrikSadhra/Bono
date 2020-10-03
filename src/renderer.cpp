@@ -6,7 +6,7 @@
 
 namespace Bono
 {
-    Renderer::Renderer(const std::shared_ptr<RaceDataBuffer> gameData) : m_raceDataBuffer(gameData)
+    Renderer::Renderer(const std::shared_ptr<RaceDataBuffer> raceDataBuffer) : m_raceDataBuffer(raceDataBuffer)
     {
         this->_InitOpenGL(Config::get().windowWidth, Config::get().windowWidth, "Bono!");
         this->_InitIMGUI();
@@ -139,7 +139,7 @@ namespace Bono
 
     void Renderer::_GetData()
     {
-        bool isDataAvailable       = false;
+        bool isDataAvailable = false;
         PacketMotionData motionPkt = m_raceDataBuffer->GetMotionData(isDataAvailable);
         if (isDataAvailable)
         {
@@ -184,6 +184,17 @@ namespace Bono
 
     void Renderer::_DrawUI()
     {
+        // Most structures contain 20 cars – this is the maximum that can be in a race in the game.
+        // There is a data item called m_numActiveCars in the participants packet which tells you how many cars are active in the race.
+        // However, you should check the individual result status of each car in the lap data to see if that car is actively providing data.
+        // If it is not “Invalid” or “Inactive” then the corresponding vehicle index has valid data.
+
+        // for(uint8_t uCarIdx = 0; uCarIdx <  m_participantsData.back().numActiveCars; ++uCarIdx)
+        // {
+        //     m_participantsData.back().participants[uCarIdx].name;
+        //     m_lapData.back().lapData[uCarIdx].resultStatus == 2;
+        // }
+
         if (ImGui::CollapsingHeader("Telemetry Trace"))
         {
             ImGui::BeginGroup();

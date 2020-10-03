@@ -12,6 +12,8 @@
 #include "gamedata.h"
 #include "udp_client.h"
 
+#include "shaders/race_shader.h"
+
 enum WindowStatus : uint8_t
 {
     UI,
@@ -63,7 +65,7 @@ namespace Bono
     class Renderer
     {
     public:
-        explicit Renderer(std::shared_ptr<RaceDataBuffer> gameData);
+        explicit Renderer(std::shared_ptr<RaceDataBuffer> raceDataBuffer);
         ~Renderer();
         void Render();
 
@@ -86,6 +88,10 @@ namespace Bono
 
         std::shared_ptr<GLFWwindow> m_window;
         WindowStatus m_windowStatus = WindowStatus::UI;
+
+        // Track Renderer
+        glm::mat4 m_projectionMatrix;
+        // RaceShader m_raceNetShader;
 
         // UDP buffered data from F1 2019
         std::shared_ptr<RaceDataBuffer> m_raceDataBuffer;

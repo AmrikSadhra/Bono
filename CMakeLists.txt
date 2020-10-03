@@ -33,7 +33,14 @@ set(SOURCE_FILES
         src/packets.h
         src/udp_client.cpp
         src/udp_client.h
-        src/gamedata.h)
+        src/gamedata.h
+        src/shaders/race_shader.cpp
+        src/shaders/race_shader.h
+        src/shaders/base_shader.cpp
+        src/shaders/base_shader.h
+        src/shaders/shader_set.cpp
+        src/shaders/shader_set.h
+        )
 
 add_executable(Bono ${SOURCE_FILES} ${IMGUI_SOURCE_FILES})
 

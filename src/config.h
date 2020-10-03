@@ -1,11 +1,13 @@
 #pragma once
 
+#include <string>
 #include <cstdint>
 
 /* ------------- BonoConnect Compile time parameters here ---------------*/
 const uint32_t DEFAULT_X_RESOLUTION = 640;
 const uint32_t DEFAULT_Y_RESOLUTION = 480;
 const uint32_t MAX_NUM_PACKETS      = 100;
+const std::string BONO_GL_VERSION   = "330";
 
 /* --------------- BonoConnect Runtime parameters here -----------------*/
 class Config
